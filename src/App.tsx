@@ -1,542 +1,97 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Bot,
-  Brain,
-  Copy,
-  Download,
-  MessageSquarePlus,
-  RefreshCw,
-  Send,
-  Settings2,
-  Sparkles,
-  Trash2,
-  User,
-} from "lucide-react";
-import { toast } from "sonner";
-import { Toaster } from "@/components/ui/sonner";
+import { useState, useEffect } from 'react';
+import { usePKMStore } from '@/src/store/pkmStore';
+import { Sidebar } from './components/Sidebar';
+import { Editor } from './components/Editor';
+import { Dashboard } from './components/Dashboard';
+import { GapsView } from './components/GapsView';
+import { ConnectionsView } from './components/ConnectionsView';
+import { ProposalsView } from './components/ProposalsView';
+import NihiltheismEngine from './components/SocratechChat';
+import { Toaster } from 'sonner';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-import { SOCRATECH_OMEGA_PROMPT } from "./constants/socratech-omega";
-
-type ChatRole = "user" | "assistant" | "system";
-
-type ChatMessage = {
-  id: string;
-  role: ChatRole;
-  content: string;
-  createdAt: string;
-};
-
-type ChatThread = {
-  id: string;
-  title: string;
-  createdAt: string;
-  updatedAt: string;
-  model: string;
-  includeContext: boolean;
-  systemPrompt: string;
-  messages: ChatMessage[];
-};
-
-const THREAD_STORAGE_KEY = "nihiltheism-ultra-chat-threads";
-const ACTIVE_THREAD_STORAGE_KEY = "nihiltheism-ultra-chat-active-thread";
-
-const AVAILABLE_MODELS = [
-  "google/gemini-2.5-flash",
-  "openai/gpt-4o-mini",
-  "anthropic/claude-3.5-sonnet",
-];
-
-const DEFAULT_SYSTEM_PROMPT = SOCRATECH_OMEGA_PROMPT;
-
-const createId = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
-
-const createNewThread = (): ChatThread => {
-  const now = new Date().toISOString();
-  return {
-    id: createId(),
-    title: "Untitled Session",
-    createdAt: now,
-    updatedAt: now,
-    model: AVAILABLE_MODELS[0],
-    includeContext: true,
-    systemPrompt: DEFAULT_SYSTEM_PROMPT,
-    messages: [
-      {
-        id: createId(),
-        role: "assistant",
-        content:
-          "Welcome to the Ultra-Supreme Nihiltheistic Chat Interface. Ask anything, attach your research assumptions, and I'll reason with rigor.",
-        createdAt: now,
-      },
-    ],
-  };
-};
-
-const estimateTokens = (text: string) => Math.ceil(text.trim().length / 4);
-
-export default function NihiltheismEngine() {
-  const [threads, setThreads] = useState<ChatThread[]>([]);
-  const [activeThreadId, setActiveThreadId] = useState<string>("");
-  const [input, setInput] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+export default function App() {
+  const { initializeMockData } = usePKMStore();
+  const [currentView, setCurrentView] = useState<string>('dashboard');
+  const [currentId, setCurrentId] = useState<string | undefined>();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const savedThreads = localStorage.getItem(THREAD_STORAGE_KEY);
-    const savedActiveThread = localStorage.getItem(ACTIVE_THREAD_STORAGE_KEY);
+    initializeMockData();
+  }, [initializeMockData]);
 
-    if (!savedThreads) {
-      const starterThread = createNewThread();
-      setThreads([starterThread]);
-      setActiveThreadId(starterThread.id);
-      return;
-    }
-
-    const parsedThreads: ChatThread[] = JSON.parse(savedThreads);
-    if (!parsedThreads.length) {
-      const starterThread = createNewThread();
-      setThreads([starterThread]);
-      setActiveThreadId(starterThread.id);
-      return;
-    }
-
-    setThreads(parsedThreads);
-    const activeExists = parsedThreads.some((thread) => thread.id === savedActiveThread);
-    setActiveThreadId(activeExists ? savedActiveThread ?? parsedThreads[0].id : parsedThreads[0].id);
-  }, []);
-
-  useEffect(() => {
-    if (!threads.length) return;
-    localStorage.setItem(THREAD_STORAGE_KEY, JSON.stringify(threads));
-  }, [threads]);
-
-  useEffect(() => {
-    if (!activeThreadId) return;
-    localStorage.setItem(ACTIVE_THREAD_STORAGE_KEY, activeThreadId);
-  }, [activeThreadId]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeThreadId, threads]);
-
-  const activeThread = useMemo(
-    () => threads.find((thread) => thread.id === activeThreadId),
-    [threads, activeThreadId],
-  );
-
-  const updateActiveThread = (updater: (thread: ChatThread) => ChatThread) => {
-    setThreads((prev) => prev.map((thread) => (thread.id === activeThreadId ? updater(thread) : thread)));
+  const handleNavigate = (view: string, id?: string) => {
+    setCurrentView(view);
+    setCurrentId(id);
+    setIsSidebarOpen(false); // Close sidebar on mobile after navigating
   };
 
-  const createThread = () => {
-    const newThread = createNewThread();
-    setThreads((prev) => [newThread, ...prev]);
-    setActiveThreadId(newThread.id);
-  };
-
-  const deleteThread = (threadId: string) => {
-    if (threads.length === 1) {
-      toast("Cannot delete", {
-        description: "Keep at least one thread active.",
-      });
-      return;
-    }
-
-    const updatedThreads = threads.filter((thread) => thread.id !== threadId);
-    setThreads(updatedThreads);
-    if (activeThreadId === threadId) {
-      setActiveThreadId(updatedThreads[0].id);
-    }
-  };
-
-  const sendMessage = async (overridePrompt?: string) => {
-    if (!activeThread || isSending) return;
-
-    const userText = (overridePrompt ?? input).trim();
-    if (!userText) return;
-
-    const userMessage: ChatMessage = {
-      id: createId(),
-      role: "user",
-      content: userText,
-      createdAt: new Date().toISOString(),
-    };
-
-    const optimisticMessages = [...activeThread.messages, userMessage];
-    updateActiveThread((thread) => ({
-      ...thread,
-      title: thread.messages.length <= 1 ? userText.slice(0, 48) : thread.title,
-      updatedAt: new Date().toISOString(),
-      messages: optimisticMessages,
-    }));
-
-    setInput("");
-    setIsSending(true);
-
-    try {
-      const payloadMessages = optimisticMessages
-        .filter((message) => message.role !== "system")
-        .map((message) => ({ role: message.role, content: message.content }));
-
-      const { data, error } = await supabase.functions.invoke("ai-chat", {
-        body: {
-          messages: payloadMessages,
-          model: activeThread.model,
-          includeContext: activeThread.includeContext,
-          systemPrompt: activeThread.systemPrompt,
-        },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      const assistantContent =
-        data?.choices?.[0]?.message?.content ??
-        "No response payload received. Please check your model credentials and edge function logs.";
-
-      const assistantMessage: ChatMessage = {
-        id: createId(),
-        role: "assistant",
-        content: assistantContent,
-        createdAt: new Date().toISOString(),
-      };
-
-      updateActiveThread((thread) => ({
-        ...thread,
-        updatedAt: new Date().toISOString(),
-        messages: [...thread.messages, assistantMessage],
-      }));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown chat error";
-      toast("Send failed", {
-        description: message,
-      });
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  const regenerateLastResponse = async () => {
-    if (!activeThread) return;
-
-    const lastUserMessage = [...activeThread.messages].reverse().find((message) => message.role === "user");
-    if (!lastUserMessage) {
-      toast("No user prompt", { description: "Send a prompt before regenerating." });
-      return;
-    }
-
-    updateActiveThread((thread) => ({
-      ...thread,
-      messages: thread.messages.filter((message) => message.role !== "assistant" || message.id !== thread.messages.at(-1)?.id),
-    }));
-
-    await sendMessage(lastUserMessage.content);
-  };
-
-  const exportThreadMarkdown = () => {
-    if (!activeThread) return;
-
-    const markdown = [`# ${activeThread.title}`, "", `Model: ${activeThread.model}`, ""];
-    for (const message of activeThread.messages) {
-      markdown.push(`## ${message.role.toUpperCase()}`);
-      markdown.push(message.content);
-      markdown.push("");
-    }
-
-    const blob = new Blob([markdown.join("\n")], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${activeThread.title.toLowerCase().replace(/\s+/g, "-") || "thread"}.md`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const copyLastAssistantMessage = async () => {
-    if (!activeThread) return;
-    const lastAssistant = [...activeThread.messages].reverse().find((message) => message.role === "assistant");
-    if (!lastAssistant) return;
-    await navigator.clipboard.writeText(lastAssistant.content);
-    toast("Copied", { description: "Last assistant response copied to clipboard." });
-  };
-
-  if (!activeThread) {
-    return <div className="min-h-screen bg-background" />;
-  }
-
-  const promptTokens = estimateTokens(input);
+  const getMotionProps = () => ({
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -10 },
+    transition: { ease: "easeOut" as const, duration: 0.5 },
+    className: "flex-1 flex overflow-hidden w-full h-full"
+  });
 
   return (
     <>
-      <Toaster theme="dark" />
-      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-100 p-4 md:p-6 overflow-hidden">
-        <div className="mx-auto h-[calc(100vh-3rem)] max-w-[1600px] grid gap-4 lg:grid-cols-[300px_1fr_auto]">
-          <Card className="border-zinc-800 bg-zinc-900/70 backdrop-blur-md overflow-hidden flex flex-col">
-            <CardHeader className="pb-4 shrink-0">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-emerald-400" />
-                Ultra Chat Sessions
-              </CardTitle>
-              <CardDescription>Persistent conversation memory and fast context switching.</CardDescription>
-              <Button onClick={createThread} className="w-full mt-2">
-                <MessageSquarePlus className="mr-2 h-4 w-4" /> New Session
-              </Button>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0">
-              <ScrollArea className="h-full px-6">
-                <div className="space-y-2 pb-6">
-                  {threads.map((thread) => (
-                    <button
-                      key={thread.id}
-                      onClick={() => setActiveThreadId(thread.id)}
-                      className={`w-full rounded-lg border p-3 text-left transition-colors ${
-                        thread.id === activeThreadId
-                          ? "border-primary bg-primary/15"
-                          : "border-zinc-800 bg-zinc-900 hover:bg-zinc-800/70"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-medium truncate">{thread.title}</p>
-                        <Trash2
-                          className="h-3.5 w-3.5 text-zinc-500 hover:text-red-300 shrink-0"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            deleteThread(thread.id);
-                          }}
-                        />
-                      </div>
-                      <p className="text-xs text-zinc-500 mt-1">
-                        {new Date(thread.updatedAt).toLocaleString()}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+      <div className="dark flex h-[100dvh] bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30 relative">
+        <Sidebar 
+          currentView={currentView === 'editor' && currentId ? `editor-${currentId}` : currentView} 
+          onNavigate={handleNavigate} 
+          isOpen={isSidebarOpen}
+          setIsOpen={setIsSidebarOpen}
+        />
+        
+        <main className="flex-1 flex flex-col overflow-hidden relative w-full">
+          {/* Mobile Header */}
+          <div className="lg:hidden flex items-center p-4 border-b border-border bg-background shrink-0 z-10 h-14">
+            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(true)} className="mr-3 text-muted-foreground hover:text-foreground">
+              <Menu className="h-5 w-5" />
+            </Button>
+            <span className="font-serif font-bold text-lg text-foreground">Nihiltheism PKM</span>
+          </div>
 
-          <Card className="border-zinc-800 bg-zinc-900/70 backdrop-blur-md overflow-hidden flex flex-col">
-            <CardHeader className="pb-3 shrink-0">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <CardTitle className="text-xl">Ultra-Supreme Nihiltheistic Interface</CardTitle>
-                  <CardDescription>
-                    Elite pro-user chat flow with model control, context memory, and fast export.
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button size="sm" variant="secondary" onClick={copyLastAssistantMessage}>
-                    <Copy className="h-4 w-4 mr-1" /> Copy
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={exportThreadMarkdown}>
-                    <Download className="h-4 w-4 mr-1" /> Export
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={regenerateLastResponse} disabled={isSending}>
-                    <RefreshCw className="h-4 w-4 mr-1" /> Regenerate
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => setIsRightPanelOpen((prev) => !prev)}>
-                    <Settings2 className="h-4 w-4 mr-1" /> Controls
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <Separator className="bg-zinc-800" />
-            <CardContent className="pt-4 flex-1 flex flex-col overflow-hidden">
-              <ScrollArea className="flex-1 pr-4 mb-4">
-                <div className="space-y-4 pb-4">
-                  {activeThread.messages.map((message) => (
-                    <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-3 border ${
-                          message.role === "user"
-                            ? "bg-primary/20 border-primary/40"
-                            : "bg-zinc-950/80 border-zinc-800"
-                        }`}
-                      >
-                        <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-400">
-                          {message.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
-                          {message.role}
-                        </div>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
-
-              <div className="mt-auto space-y-3 shrink-0">
-                <Textarea
-                  value={input}
-                  onChange={(event) => setInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                      event.preventDefault();
-                      void sendMessage();
-                    }
-                  }}
-                  placeholder="Compose your prompt... (Ctrl/Cmd + Enter to send)"
-                  className="min-h-[100px] max-h-[160px] bg-zinc-950/70 border-zinc-700"
-                />
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-xs text-zinc-400">
-                    <Badge variant="outline" className="border-zinc-700">~{promptTokens} tokens</Badge>
-                    <Badge variant="outline" className="border-zinc-700">{activeThread.model}</Badge>
-                    {activeThread.includeContext && <Badge className="bg-emerald-700/70 text-emerald-100">Vault Context On</Badge>}
-                  </div>
-                  <Button onClick={() => void sendMessage()} disabled={isSending || !input.trim()}>
-                    {isSending ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                    Send
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {isRightPanelOpen && (
-            <Card className="w-full lg:w-[320px] border-zinc-800 bg-zinc-900/70 backdrop-blur-md overflow-hidden flex flex-col">
-              <CardHeader className="shrink-0">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Brain className="h-4 w-4 text-violet-300" /> Pro Controls
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto">
-                <Tabs defaultValue="model" className="space-y-4">
-                  <TabsList className="grid grid-cols-2 bg-zinc-950/70">
-                    <TabsTrigger value="model" className="data-[state=active]:bg-zinc-800">Runtime</TabsTrigger>
-                    <TabsTrigger value="system" className="data-[state=active]:bg-zinc-800">System</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="model" className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="model" className="text-zinc-300">Model</Label>
-                      <select
-                        id="model"
-                        value={activeThread.model}
-                        onChange={(event) =>
-                          updateActiveThread((thread) => ({ ...thread, model: event.target.value }))
-                        }
-                        className="w-full h-10 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-600"
-                      >
-                        {AVAILABLE_MODELS.map((model) => (
-                          <option key={model} value={model}>
-                            {model}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="flex items-center justify-between rounded-lg border border-zinc-800 p-3 bg-zinc-950/40">
-                      <div>
-                        <p className="text-sm font-medium text-zinc-200">Include vault context</p>
-                        <p className="text-xs text-zinc-500">Inject notes + tags into system context.</p>
-                      </div>
-                      <Switch
-                        checked={activeThread.includeContext}
-                        onCheckedChange={(checked) =>
-                          updateActiveThread((thread) => ({ ...thread, includeContext: checked }))
-                        }
-                      />
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="system" className="space-y-3">
-                    <Label htmlFor="system" className="text-zinc-300">System Prompt</Label>
-                    <Textarea
-                      id="system"
-                      value={activeThread.systemPrompt}
-                      onChange={(event) =>
-                        updateActiveThread((thread) => ({ ...thread, systemPrompt: event.target.value }))
-                      }
-                      className="min-h-[200px] h-[30vh] max-h-[500px] bg-zinc-950/70 border-zinc-700 text-sm leading-relaxed"
-                    />
-                    <div className="grid grid-cols-2 gap-2 pb-2">
-                       <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs border-zinc-700 hover:bg-zinc-800"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\nACTIVATE JOURNAL314 MODE: focus on cross-traditional evidentiary corpus analysis, structural recurrence. Do not overclaim universality.",
-                          }))
-                        }
-                      >
-                       + Journal314 Mode
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs border-zinc-700 hover:bg-zinc-800"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\nACTIVATE REN MODE: Handle the Religious Experience of Nihilism structure, apophatic silence, nonexistence, dread, and transcendence.",
-                          }))
-                        }
-                      >
-                       + REN Mode
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs border-zinc-700 hover:bg-zinc-800"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\nACTIVATE EDITORIAL MODE: Focus on recursion, densification, manuscript repair, structural consolidation, and anti-inflation discipline.",
-                          }))
-                        }
-                      >
-                       + Editorial Mode
-                      </Button>
-                       <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs border-zinc-700 hover:bg-zinc-800"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\nACTIVATE DEFENSE MODE: Hostile doctoral tribunal. Demand operational definitions, expose hidden premises. Identify the weakest link.",
-                          }))
-                        }
-                      >
-                       + Defense Mode
-                      </Button>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      className="w-full"
-                      onClick={() =>
-                        updateActiveThread((thread) => ({
-                          ...thread,
-                          systemPrompt: DEFAULT_SYSTEM_PROMPT,
-                        }))
-                      }
-                    >
-                      Reset to Socratech Ω Core
-                    </Button>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+          <div className="flex-1 overflow-hidden relative">
+            <AnimatePresence mode="wait">
+            {currentView === 'dashboard' && (
+              <motion.div key="dashboard" {...getMotionProps()}>
+                <Dashboard onNavigate={handleNavigate} />
+              </motion.div>
+            )}
+            {currentView === 'editor' && (
+              <motion.div key={`editor-${currentId || 'new'}`} {...getMotionProps()}>
+                <Editor documentId={currentId} onNavigate={handleNavigate} />
+              </motion.div>
+            )}
+            {currentView === 'chat' && (
+               <motion.div key="chat" {...getMotionProps()}>
+                <NihiltheismEngine />
+              </motion.div>
+            )}
+            {currentView === 'gaps' && (
+              <motion.div key="gaps" {...getMotionProps()}>
+                 <GapsView />
+              </motion.div>
+            )}
+            {currentView === 'connections' && (
+               <motion.div key="connections" {...getMotionProps()}>
+                  <ConnectionsView />
+               </motion.div>
+            )}
+            {currentView === 'proposals' && (
+               <motion.div key="proposals" {...getMotionProps()}>
+                  <ProposalsView />
+               </motion.div>
+            )}
+          </AnimatePresence>
+          </div>
+        </main>
       </div>
+      <Toaster theme="dark" />
     </>
   );
 }
-
