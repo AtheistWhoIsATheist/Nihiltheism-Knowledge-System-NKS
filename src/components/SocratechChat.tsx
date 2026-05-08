@@ -30,6 +30,13 @@ import { cn } from "@/lib/utils";
 
 import { SOCRATECH_OMEGA_PROMPT } from "../constants/socratech-omega";
 import { ONTOLOGY_GENERATOR_PROMPT } from "../constants/ontology-generator";
+import { PHILOSOPHICAL_ANALYST_PROMPT } from "../constants/philosophical-analyst";
+import { AGENT_BUILDER_PROMPT } from "../constants/agent-builder";
+import { AGENT_ORCHESTRATION_PROMPT } from "../constants/agent-orchestration";
+import { FRONTEND_DESIGN_PROMPT } from "../constants/frontend-design";
+import { THREEJS_SKILLS_PROMPT } from "../constants/threejs-skills";
+import { ELITE_SOFTWARE_ARCHITECT_PROMPT } from "../constants/elite-software-architect";
+import { SENIOR_ENGINEERING_EXECUTION_PROMPT } from "../constants/senior-engineering-execution";
 
 type ChatRole = "user" | "assistant" | "system";
 
@@ -573,6 +580,97 @@ export default function NihiltheismEngine() {
                         }
                       >
                        + Ontology (InfraNodus)
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
+                        onClick={() =>
+                          updateActiveThread((thread) => ({
+                            ...thread,
+                            systemPrompt: thread.systemPrompt + "\n\n" + PHILOSOPHICAL_ANALYST_PROMPT,
+                          }))
+                        }
+                      >
+                       + S.P. Analyst
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
+                        onClick={() =>
+                          updateActiveThread((thread) => ({
+                            ...thread,
+                            systemPrompt: thread.systemPrompt + "\n\n" + AGENT_BUILDER_PROMPT,
+                          }))
+                        }
+                      >
+                       + Agent Builder
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
+                        onClick={() =>
+                          updateActiveThread((thread) => ({
+                            ...thread,
+                            systemPrompt: thread.systemPrompt + "\n\n" + AGENT_ORCHESTRATION_PROMPT,
+                          }))
+                        }
+                      >
+                       + Agent Orchestration
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
+                        onClick={() =>
+                          updateActiveThread((thread) => ({
+                            ...thread,
+                            systemPrompt: thread.systemPrompt + "\n\n" + FRONTEND_DESIGN_PROMPT,
+                          }))
+                        }
+                      >
+                       + Frontend Design
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
+                        onClick={() =>
+                          updateActiveThread((thread) => ({
+                            ...thread,
+                            systemPrompt: thread.systemPrompt + "\n\n" + THREEJS_SKILLS_PROMPT,
+                          }))
+                        }
+                      >
+                       + Three.js Skills
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
+                        onClick={() =>
+                          updateActiveThread((thread) => ({
+                            ...thread,
+                            systemPrompt: thread.systemPrompt + "\n\n" + ELITE_SOFTWARE_ARCHITECT_PROMPT,
+                          }))
+                        }
+                      >
+                       + Elite Architect
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
+                        onClick={() =>
+                          updateActiveThread((thread) => ({
+                            ...thread,
+                            systemPrompt: thread.systemPrompt + "\n\n" + SENIOR_ENGINEERING_EXECUTION_PROMPT,
+                          }))
+                        }
+                      >
+                       + Sr. Engineer Exec
                       </Button>
                     </div>
                     <Button
