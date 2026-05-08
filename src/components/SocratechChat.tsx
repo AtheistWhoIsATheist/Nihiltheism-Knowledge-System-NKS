@@ -22,22 +22,17 @@ import {
   Trash2,
   User,
   MenuSquare,
-  X
+  X,
+  Database
 } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import { SOCRATECH_OMEGA_PROMPT } from "../constants/socratech-omega";
-import { ONTOLOGY_GENERATOR_PROMPT } from "../constants/ontology-generator";
-import { PHILOSOPHICAL_ANALYST_PROMPT } from "../constants/philosophical-analyst";
-import { AGENT_BUILDER_PROMPT } from "../constants/agent-builder";
-import { AGENT_ORCHESTRATION_PROMPT } from "../constants/agent-orchestration";
-import { FRONTEND_DESIGN_PROMPT } from "../constants/frontend-design";
-import { THREEJS_SKILLS_PROMPT } from "../constants/threejs-skills";
-import { ELITE_SOFTWARE_ARCHITECT_PROMPT } from "../constants/elite-software-architect";
-import { SENIOR_ENGINEERING_EXECUTION_PROMPT } from "../constants/senior-engineering-execution";
-import { FILE_INGESTION_SYSTEM_PROMPT } from "../constants/file-ingestion-system";
+import { PromptOrchestrator } from "./PromptOrchestrator";
 
 type ChatRole = "user" | "assistant" | "system";
 
@@ -104,6 +99,7 @@ export default function NihiltheismEngine() {
   const [isSending, setIsSending] = useState(false);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
   const [mobileView, setMobileView] = useState<'chat' | 'threads' | 'controls'>('chat');
+  const [inputMode, setInputMode] = useState<'write' | 'preview'>('write');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -295,39 +291,39 @@ export default function NihiltheismEngine() {
   return (
     <>
       <Toaster theme="dark" />
-      <div className="flex-1 h-full bg-background text-foreground p-0 md:p-4 lg:p-6 overflow-hidden">
+      <div className="flex-1 h-full bg-transparent text-foreground p-0 md:p-4 lg:p-6 overflow-hidden">
         <div className="mx-auto h-full max-w-[1600px] flex md:grid gap-4 md:grid-cols-[260px_1fr] lg:grid-cols-[280px_1fr_auto]">
           {/* Threads Sidebar */}
-          <Card className={cn(
-            "border-border bg-card/70 backdrop-blur-md overflow-hidden flex-col md:flex rounded-none md:rounded-lg border-x-0 md:border-x",
+          <div className={cn(
+            "glass-card border-white/5 overflow-hidden flex-col md:flex rounded-none md:rounded-xl md:border",
             mobileView === 'threads' ? "flex flex-1" : "hidden md:flex"
           )}>
-            <CardHeader className="pb-4 shrink-0">
+            <CardHeader className="pb-4 shrink-0 cerebral-smoke border-b border-white/5">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-accent" />
+                <CardTitle className="text-lg flex items-center gap-2 text-foreground font-serif">
+                  <Sparkles className="h-4 w-4 text-primary animate-pulse" />
                   Ultra Chat Sessions
                 </CardTitle>
                 <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileView('chat')}>
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </div>
-              <CardDescription className="text-muted-foreground tracking-wide">Persistent conversation memory and fast context switching.</CardDescription>
-              <Button onClick={() => { createThread(); setMobileView('chat'); }} className="w-full mt-2 font-medium tracking-wide">
-                <MessageSquarePlus className="mr-2 h-4 w-4" /> New Session
+              <CardDescription className="text-muted-foreground/80 tracking-wide text-xs">Persistent conversation memory and fast context switching.</CardDescription>
+              <Button onClick={() => { createThread(); setMobileView('chat'); }} className="w-full mt-3 font-bold tracking-widest text-[10px] uppercase bg-primary/20 text-primary hover:bg-primary/30 border border-primary/20">
+                <MessageSquarePlus className="mr-2 h-3.5 w-3.5" /> New Session
               </Button>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0">
+            <CardContent className="flex-1 overflow-hidden p-0 bg-transparent">
               <ScrollArea className="h-full px-6">
-                <div className="space-y-2 pb-6">
+                <div className="space-y-3 pb-6 pt-4">
                   {threads.map((thread) => (
                     <button
                       key={thread.id}
                       onClick={() => { setActiveThreadId(thread.id); setMobileView('chat'); }}
-                      className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                      className={`w-full rounded-xl border p-3 text-left transition-all duration-300 ${
                         thread.id === activeThreadId
-                          ? "border-primary bg-primary/10 hover:bg-primary/15"
-                          : "border-border bg-card hover:bg-muted/50"
+                          ? "border-primary/40 bg-primary/10 shadow-[0_0_15px_rgba(138,43,226,0.15)]"
+                          : "border-white/5 bg-[#060609]/40 hover:bg-[#121218]/80 hover:border-white/10"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -348,75 +344,82 @@ export default function NihiltheismEngine() {
                 </div>
               </ScrollArea>
             </CardContent>
-          </Card>
+          </div>
 
           {/* Main Chat Interface */}
-          <Card className={cn(
-            "border-border bg-card/70 backdrop-blur-md overflow-hidden flex-col flex-1 rounded-none md:rounded-lg border-x-0 border-y-0 md:border-x md:border-y",
+          <div className={cn(
+            "glass-card border-white/5 overflow-hidden flex-col flex-1 rounded-none md:rounded-xl border-x-0 border-y-0 md:border",
             mobileView === 'chat' ? "flex" : "hidden md:flex"
           )}>
-            <CardHeader className="pb-3 shrink-0 px-4 md:px-6">
+            <CardHeader className="pb-3 shrink-0 px-4 md:px-6 cerebral-smoke border-b border-white/5">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" className="md:hidden -ml-2" onClick={() => setMobileView('threads')}>
+                  <Button variant="ghost" size="icon" className="md:hidden -ml-2 hover:bg-white/5" onClick={() => setMobileView('threads')}>
                     <MenuSquare className="h-5 w-5 text-muted-foreground" />
                   </Button>
                   <div>
-                    <CardTitle className="text-xl font-serif">Ultra-Supreme Nihiltheistic Interface</CardTitle>
-                    <CardDescription className="tracking-wide hidden sm:block">
+                    <CardTitle className="text-xl font-serif text-foreground tracking-tight">Ultra-Supreme Nihiltheistic Interface</CardTitle>
+                    <CardDescription className="tracking-wide hidden sm:block text-muted-foreground/80 text-xs">
                       Elite pro-user chat flow with model control, context memory, and fast export.
                     </CardDescription>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Button size="sm" variant="secondary" onClick={copyLastAssistantMessage} className="hidden sm:flex">
+                  <Button size="sm" variant="secondary" onClick={copyLastAssistantMessage} className="hidden sm:flex bg-white/5 hover:bg-white/10 text-foreground border-white/5">
                     <Copy className="h-4 w-4 mr-1" /> Copy
                   </Button>
-                   <Button size="icon" variant="secondary" onClick={copyLastAssistantMessage} className="sm:hidden h-8 w-8">
+                   <Button size="icon" variant="secondary" onClick={copyLastAssistantMessage} className="sm:hidden h-8 w-8 bg-white/5 hover:bg-white/10 text-foreground border-white/5">
                     <Copy className="h-4 w-4" />
                   </Button>
                   
-                  <Button size="sm" variant="secondary" onClick={exportThreadMarkdown} className="hidden sm:flex">
+                  <Button size="sm" variant="secondary" onClick={exportThreadMarkdown} className="hidden sm:flex bg-white/5 hover:bg-white/10 text-foreground border-white/5">
                     <Download className="h-4 w-4 mr-1" /> Export
                   </Button>
-                  <Button size="icon" variant="secondary" onClick={exportThreadMarkdown} className="sm:hidden h-8 w-8">
+                  <Button size="icon" variant="secondary" onClick={exportThreadMarkdown} className="sm:hidden h-8 w-8 bg-white/5 hover:bg-white/10 text-foreground border-white/5">
                     <Download className="h-4 w-4" />
                   </Button>
 
-                  <Button size="sm" variant="secondary" onClick={regenerateLastResponse} disabled={isSending} className="hidden sm:flex">
+                  <Button size="sm" variant="secondary" onClick={regenerateLastResponse} disabled={isSending} className="hidden sm:flex bg-white/5 hover:bg-white/10 text-foreground border-white/5">
                     <RefreshCw className="h-4 w-4 mr-1" /> Regenerate
                   </Button>
-                  <Button size="icon" variant="secondary" onClick={regenerateLastResponse} disabled={isSending} className="sm:hidden h-8 w-8">
+                  <Button size="icon" variant="secondary" onClick={regenerateLastResponse} disabled={isSending} className="sm:hidden h-8 w-8 bg-white/5 hover:bg-white/10 text-foreground border-white/5">
                     <RefreshCw className="h-4 w-4" />
                   </Button>
 
-                  <Button size="sm" variant="outline" onClick={() => { setIsRightPanelOpen((prev) => !prev); setMobileView('controls'); }} className="hidden lg:flex">
+                  <Button size="sm" variant="outline" onClick={() => { setIsRightPanelOpen((prev) => !prev); setMobileView('controls'); }} className="hidden lg:flex border-primary/20 text-primary hover:bg-primary/10">
                     <Settings2 className="h-4 w-4 mr-1" /> Controls
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => setMobileView('controls')} className="lg:hidden flex">
+                  <Button size="sm" variant="outline" onClick={() => setMobileView('controls')} className="lg:hidden flex border-primary/20 text-primary hover:bg-primary/10">
                     <Settings2 className="h-4 w-4 mr-1" /> Controls
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <Separator className="bg-border" />
-            <CardContent className="pt-4 flex-1 flex flex-col overflow-hidden px-4 md:px-6">
+            <CardContent className="pt-0 flex-1 flex flex-col overflow-hidden px-4 md:px-6 bg-transparent">
               <ScrollArea className="flex-1 pr-4 mb-4">
-                <div className="space-y-4 pb-4">
+                <div className="space-y-6 pb-4 pt-6">
                   {activeThread.messages.map((message) => (
                     <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                       <div
-                        className={`max-w-[85%] md:max-w-[80%] rounded-2xl px-4 py-3 border ${
+                        className={`max-w-[100%] md:max-w-[85%] rounded-xl px-5 py-4 border shadow-[0_8px_30px_rgb(0,0,0,0.12)] ${
                           message.role === "user"
-                            ? "bg-primary/10 border-primary/20"
-                            : "bg-muted/30 border-border"
+                            ? "neumorphic-dark border-primary/20 rounded-tr-sm"
+                            : "glass border-white/5 rounded-tl-sm"
                         }`}
                       >
-                        <div className="mb-2 flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
-                          {message.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                        <div className="mb-3 flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60">
+                          {message.role === "user" ? <User className="h-3.5 w-3.5 text-primary/80" /> : <Bot className="h-3.5 w-3.5 text-foreground/80" />}
                           {message.role}
                         </div>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap font-serif text-foreground/90">{message.content}</p>
+                        <div className={cn(
+                          "text-sm leading-relaxed font-sans prose prose-sm prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[#060609]/80 prose-pre:border prose-pre:border-white/5"
+                        )}>
+                          {message.role === "assistant" || message.role === "user" ? (
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                          ) : (
+                            <p className="whitespace-pre-wrap font-serif">{message.content}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -425,52 +428,69 @@ export default function NihiltheismEngine() {
               </ScrollArea>
 
               <div className="mt-auto space-y-3 shrink-0 pb-2">
-                <Textarea
-                  value={input}
-                  onChange={(event) => setInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                      event.preventDefault();
-                      void sendMessage();
-                    }
-                  }}
-                  placeholder="Compose prompt... (Cmd+Enter)"
-                  className="min-h-[80px] max-h-[160px] bg-background border-border placeholder:text-muted-foreground/50 font-serif resize-none shadow-none focus-visible:ring-primary text-base md:text-sm"
-                />
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                    <Badge variant="outline" className="border-border bg-background text-[10px] uppercase tracking-widest font-mono hidden xs:inline-flex">~{promptTokens} tok</Badge>
-                    <Badge variant="outline" className="border-border bg-background text-[10px] uppercase tracking-widest font-mono">{activeThread.model.split('/').pop()}</Badge>
-                    {activeThread.includeContext && <Badge className="bg-primary/20 text-primary border-primary/20 text-[10px] uppercase tracking-widest mt-0 hidden sm:inline-flex">Vault On</Badge>}
+                <div className="relative rounded-xl overflow-hidden neumorphic-inner border border-white/5 focus-within:ring-1 focus-within:ring-primary/40 focus-within:border-primary/40 transition-all flex flex-col shadow-inner">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[#060609]/80 border-b border-white/5 shrink-0">
+                    <button onClick={() => setInputMode('write')} className={cn("text-[10px] uppercase tracking-widest font-bold px-3 py-1 rounded transition-colors", inputMode === 'write' ? "bg-white/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-white/5")}>Write</button>
+                    <button onClick={() => setInputMode('preview')} className={cn("text-[10px] uppercase tracking-widest font-bold px-3 py-1 rounded transition-colors", inputMode === 'preview' ? "bg-white/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-white/5")}>Preview</button>
                   </div>
-                  <Button onClick={() => void sendMessage()} disabled={isSending || !input.trim()} className="font-semibold tracking-wide uppercase text-xs h-9 ml-auto shrink-0">
+                  {inputMode === 'write' ? (
+                    <Textarea
+                      value={input}
+                      onChange={(event) => setInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                          event.preventDefault();
+                          void sendMessage();
+                        }
+                      }}
+                      placeholder="Compose prompt using markdown... (Cmd+Enter)"
+                      className="min-h-[80px] max-h-[200px] bg-transparent border-0 placeholder:text-muted-foreground/40 font-sans resize-none shadow-none focus-visible:ring-0 text-base md:text-sm p-4 text-foreground/90"
+                    />
+                  ) : (
+                    <div className="min-h-[80px] max-h-[200px] overflow-y-auto p-4 text-sm text-foreground bg-transparent prose prose-sm prose-invert max-w-none">
+                      {input ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{input}</ReactMarkdown> : <span className="text-muted-foreground/40 italic font-serif">Engage the void...</span>}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                    <Badge variant="outline" className="border-white/10 bg-[#060609]/50 text-[10px] uppercase tracking-widest font-mono hidden xs:inline-flex text-foreground/70">~{promptTokens} tok</Badge>
+                    <Badge variant="outline" className="border-white/10 bg-[#060609]/50 text-[10px] uppercase tracking-widest font-mono text-foreground/70">{activeThread.model.split('/').pop()}</Badge>
+                    {activeThread.includeContext && <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] uppercase tracking-widest mt-0 hidden sm:inline-flex shadow-[0_0_10px_rgba(138,43,226,0.1)]">Vault On</Badge>}
+                  </div>
+                  <Button 
+                    onClick={() => void sendMessage()} 
+                    disabled={isSending || !input.trim()} 
+                    className="font-bold tracking-widest uppercase text-[10px] h-9 ml-auto shrink-0 bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(138,43,226,0.5)] transition-all duration-300 disabled:opacity-50 disabled:shadow-none"
+                  >
                     {isSending ? <RefreshCw className="h-4 w-4 md:mr-2 animate-spin" /> : <Send className="h-4 w-4 md:mr-2" />}
                     <span className="hidden md:inline">Send</span>
                   </Button>
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </div>
 
           {/* Right Panel Controls */}
           {(isRightPanelOpen || mobileView === 'controls') && (
-            <Card className={cn(
-              "w-full lg:w-[300px] border-border bg-card/70 backdrop-blur-md overflow-hidden flex-col rounded-none lg:rounded-lg",
+            <div className={cn(
+              "glass-card border-white/5 w-full lg:w-[300px] overflow-hidden flex-col rounded-none lg:rounded-xl",
               mobileView === 'controls' ? "flex flex-1 border-x-0" : "hidden lg:flex"
             )}>
-              <CardHeader className="shrink-0 flex flex-row items-center justify-between pb-4 lg:pb-6">
-                <CardTitle className="text-base font-serif flex items-center gap-2">
-                  <Brain className="h-4 w-4 text-mystic-purple" /> Pro Controls
+              <CardHeader className="shrink-0 flex flex-row items-center justify-between pb-4 lg:pb-6 cerebral-smoke border-b border-white/5">
+                <CardTitle className="text-base font-serif flex items-center gap-2 text-foreground">
+                  <Brain className="h-4 w-4 text-primary" /> Pro Controls
                 </CardTitle>
-                <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8" onClick={() => setMobileView('chat')}>
+                <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => setMobileView('chat')}>
                   <X className="h-4 w-4" />
                 </Button>
               </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto">
+              <CardContent className="flex-1 overflow-y-auto pt-4 bg-transparent">
                 <Tabs defaultValue="model" className="space-y-4">
-                  <TabsList className="grid grid-cols-2 bg-muted/40 p-1">
-                    <TabsTrigger value="model" className="data-[state=active]:bg-background text-xs uppercase tracking-widest font-bold">Runtime</TabsTrigger>
-                    <TabsTrigger value="system" className="data-[state=active]:bg-background text-xs uppercase tracking-widest font-bold">System</TabsTrigger>
+                  <TabsList className="grid grid-cols-2 bg-[#060609]/60 p-1 glass">
+                    <TabsTrigger value="model" className="data-[state=active]:bg-white/10 text-xs uppercase tracking-widest font-bold">Runtime</TabsTrigger>
+                    <TabsTrigger value="system" className="data-[state=active]:bg-white/10 text-xs uppercase tracking-widest font-bold">System</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="model" className="space-y-4">
@@ -482,7 +502,7 @@ export default function NihiltheismEngine() {
                         onChange={(event) =>
                           updateActiveThread((thread) => ({ ...thread, model: event.target.value }))
                         }
-                        className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary shadow-none"
+                        className="w-full h-10 rounded-md border border-white/5 bg-[#060609]/80 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary shadow-none"
                       >
                         {AVAILABLE_MODELS.map((model) => (
                           <option key={model} value={model}>
@@ -492,7 +512,7 @@ export default function NihiltheismEngine() {
                       </select>
                     </div>
 
-                    <div className="flex items-center justify-between rounded-lg border border-border p-4 bg-muted/20">
+                    <div className="flex items-center justify-between rounded-lg border border-white/5 p-4 bg-[#0a0a0f]/50 glass-card">
                       <div>
                         <p className="text-sm font-bold tracking-wide text-foreground">Include vault context</p>
                         <p className="text-xs text-muted-foreground mt-1">Inject notes + tags into system context.</p>
@@ -506,7 +526,7 @@ export default function NihiltheismEngine() {
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="system" className="space-y-3">
+                  <TabsContent value="system" className="space-y-3 flex flex-col h-full overflow-hidden">
                     <Label htmlFor="system" className="text-foreground text-xs uppercase tracking-widest font-bold">System Prompt</Label>
                     <Textarea
                       id="system"
@@ -514,195 +534,18 @@ export default function NihiltheismEngine() {
                       onChange={(event) =>
                         updateActiveThread((thread) => ({ ...thread, systemPrompt: event.target.value }))
                       }
-                      className="min-h-[200px] h-[30vh] max-h-[500px] bg-background border-border text-sm leading-relaxed shadow-none resize-none font-mono text-muted-foreground"
+                      className="min-h-[120px] max-h-[300px] shrink-0 bg-[#060609]/80 border-white/5 text-[11px] leading-relaxed shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] font-mono text-muted-foreground focus-visible:ring-primary"
                     />
-                    <div className="grid grid-cols-2 gap-2 pb-2">
-                       <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\nACTIVATE JOURNAL314 MODE: focus on cross-traditional evidentiary corpus analysis, structural recurrence. Do not overclaim universality.",
-                          }))
-                        }
-                      >
-                       + Journal314
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\nACTIVATE REN MODE: Handle the Religious Experience of Nihilism structure, apophatic silence, nonexistence, dread, and transcendence.",
-                          }))
-                        }
-                      >
-                       + REN Mode
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\nACTIVATE EDITORIAL MODE: Focus on recursion, densification, manuscript repair, structural consolidation, and anti-inflation discipline.",
-                          }))
-                        }
-                      >
-                       + Editorial
-                      </Button>
-                       <Button
-                        variant="outline"
-                        size="sm"
-                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\nACTIVATE DEFENSE MODE: Hostile doctoral tribunal. Demand operational definitions, expose hidden premises. Identify the weakest link.",
-                          }))
-                        }
-                      >
-                       + Defense
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\n" + ONTOLOGY_GENERATOR_PROMPT,
-                          }))
-                        }
-                      >
-                       + Ontology (InfraNodus)
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\n" + PHILOSOPHICAL_ANALYST_PROMPT,
-                          }))
-                        }
-                      >
-                       + S.P. Analyst
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\n" + AGENT_BUILDER_PROMPT,
-                          }))
-                        }
-                      >
-                       + Agent Builder
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\n" + AGENT_ORCHESTRATION_PROMPT,
-                          }))
-                        }
-                      >
-                       + Agent Orchestration
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\n" + FRONTEND_DESIGN_PROMPT,
-                          }))
-                        }
-                      >
-                       + Frontend Design
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\n" + THREEJS_SKILLS_PROMPT,
-                          }))
-                        }
-                      >
-                       + Three.js Skills
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\n" + ELITE_SOFTWARE_ARCHITECT_PROMPT,
-                          }))
-                        }
-                      >
-                       + Elite Architect
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\n" + SENIOR_ENGINEERING_EXECUTION_PROMPT,
-                          }))
-                        }
-                      >
-                       + Sr. Engineer Exec
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
-                        onClick={() =>
-                          updateActiveThread((thread) => ({
-                            ...thread,
-                            systemPrompt: thread.systemPrompt + "\n\n" + FILE_INGESTION_SYSTEM_PROMPT,
-                          }))
-                        }
-                      >
-                       + File Ingestion
-                      </Button>
+                    <div className="flex-1 overflow-hidden mt-2">
+                       <PromptOrchestrator 
+                          currentSystemPrompt={activeThread.systemPrompt}
+                          onSelectPrompt={(content) => updateActiveThread(t => ({...t, systemPrompt: content}))} 
+                       />
                     </div>
-                    <Button
-                      variant="secondary"
-                      className="w-full text-xs font-bold uppercase tracking-widest"
-                      onClick={() =>
-                        updateActiveThread((thread) => ({
-                          ...thread,
-                          systemPrompt: DEFAULT_SYSTEM_PROMPT,
-                        }))
-                      }
-                    >
-                      Reset Core
-                    </Button>
                   </TabsContent>
                 </Tabs>
               </CardContent>
-            </Card>
+            </div>
           )}
         </div>
       </div>

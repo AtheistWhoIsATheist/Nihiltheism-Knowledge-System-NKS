@@ -5,51 +5,39 @@
 @import '@fontsource/inter';
 
 @theme {
-  /* Semantic color tokens using OKLCH or HEX for better color perception */
-  --color-background: #050505; /* void-black */
-  --color-foreground: #e0e0e0; /* bone */
+  /* Semantic color tokens - Deep Cosmos, Gunmetal, Neumorphic */
+  --color-background: #030305; /* Deep deep space black */
+  --color-foreground: #e4e4e7; /* Gunmetal white */
 
-  --color-primary: #bd00ff; /* mystic-purple */
-  --color-primary-foreground: #050505;
+  --color-primary: #8a2be2; /* Ether purple */
+  --color-primary-foreground: #ffffff;
 
-  --color-secondary: #0a0a0a; /* void-900 */
-  --color-secondary-foreground: #e0e0e0;
+  --color-secondary: #121218; /* Cosmic gunmetal */
+  --color-secondary-foreground: #d1d1d6;
 
-  --color-muted: #141414; /* void-800 */
-  --color-muted-foreground: #8b8b8b; /* ash */
+  --color-muted: #181920; /* Deep smoky grey */
+  --color-muted-foreground: #8e8e93;
 
-  --color-accent: #00e5ff; /* cyber-cyan */
-  --color-accent-foreground: #050505;
+  --color-accent: #0b99ff; /* Cosmic blue */
+  --color-accent-foreground: #ffffff;
 
-  --color-destructive: #ff9500; /* dread-amber */
-  --color-destructive-foreground: #050505;
+  --color-destructive: #ff3b3b;
+  --color-destructive-foreground: #ffffff;
 
-  --color-border: #141414;
-  --color-ring: #bd00ff;
-  --color-input: #141414;
+  --color-border: rgba(255, 255, 255, 0.05); /* Glass border */
+  --color-ring: rgba(138, 43, 226, 0.5);
+  --color-input: rgba(255, 255, 255, 0.03);
 
-  --color-card: #050505; /* void-black */
-  --color-card-foreground: #e0e0e0;
+  --color-card: rgba(18, 18, 24, 0.6); /* Glass card */
+  --color-card-foreground: #e4e4e7;
 
-  --color-popover: #0a0a0a;
-  --color-popover-foreground: #e0e0e0;
+  --color-popover: rgba(12, 12, 16, 0.85);
+  --color-popover-foreground: #e4e4e7;
 
-  --color-ring-offset: #050505;
-
-  /* Custom raw color variables for UI styling */
-  --color-void-black: #050505;
-  --color-void-900: #0a0a0a;
-  --color-void-800: #141414;
-  --color-cyber-cyan: #00e5ff;
-  --color-mystic-purple: #bd00ff;
-  --color-dread-amber: #ff9500;
-  --color-ash: #8b8b8b;
-  --color-bone: #e0e0e0;
-
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 
   --font-heading: 'Crimson Pro', var(--font-sans);
   --font-sans: 'Inter', 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
@@ -65,8 +53,32 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    background-image: radial-gradient(circle at 50% 0%, #1a1a2e 0%, transparent 50%), radial-gradient(circle at 0% 100%, #101018 0%, transparent 50%);
+    background-attachment: fixed;
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/5 shadow-xl;
+  }
+  .glass-card {
+    @apply bg-[#0c0c10]/60 backdrop-blur-xl border border-white/[0.03] shadow-[0_8px_32px_0_rgba(0,0,0,0.36)];
+  }
+  .glass-card-hover {
+    @apply hover:bg-[#121218]/70 hover:border-white/10 transition-all duration-300;
+  }
+  .neumorphic-dark {
+    @apply bg-background shadow-[5px_5px_15px_#010103,-5px_-5px_15px_#060609] border border-white/[0.02];
+  }
+  .neumorphic-inner {
+    @apply bg-[#060609] shadow-[inset_4px_4px_10px_#020203,inset_-4px_-4px_10px_#0a0a0f];
+  }
+  .cerebral-smoke {
+    background: linear-gradient(180deg, rgba(30, 30, 40, 0.1) 0%, rgba(10, 10, 15, 0.8) 100%);
+    backdrop-filter: blur(12px);
   }
 }

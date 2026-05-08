@@ -6,6 +6,8 @@ export interface PKMDocument {
   projectId: string | 'journal314' | 'ren' | 'general';
   title: string;
   content: string;
+  tags?: string[];
+  summary?: string;
   detectedConcepts: string[];
   resonanceScore: number | null;
   createdAt: string;

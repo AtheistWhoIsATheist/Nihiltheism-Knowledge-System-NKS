@@ -11,6 +11,7 @@ interface PKMState {
   addDocument: (doc: Omit<PKMDocument, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateDocument: (id: string, doc: Partial<PKMDocument>) => void;
   deleteDocument: (id: string) => void;
+  summarizeDocument: (id: string) => Promise<void>;
   
   addConnection: (connection: Omit<Connection, 'id'>) => void;
   addKnowledgeGap: (gap: Omit<KnowledgeGap, 'id' | 'createdAt'>) => void;
@@ -23,7 +24,7 @@ interface PKMState {
 // Generate simple mock IDs
 const genId = () => Math.random().toString(36).substring(2, 9);
 
-export const usePKMStore = create<PKMState>((set) => ({
+export const usePKMStore = create<PKMState>((set, get) => ({
   documents: [],
   connections: [],
   gaps: [],
@@ -52,6 +53,24 @@ export const usePKMStore = create<PKMState>((set) => ({
     // Also remove associated connections
     connections: state.connections.filter(c => c.sourceId !== id && c.targetId !== id)
   })),
+
+  summarizeDocument: async (id) => {
+    const doc = get().documents.find(d => d.id === id);
+    if (!doc) return;
+    
+    try {
+      const { summarizeText } = await import('../lib/ai');
+      const summary = await summarizeText(doc.content);
+      
+      set((state) => ({
+        documents: state.documents.map(d => 
+          d.id === id ? { ...d, summary, updatedAt: new Date().toISOString() } : d
+        )
+      }));
+    } catch (err) {
+      console.error("Failed to summarize document:", err);
+    }
+  },
 
   addConnection: (conn) => set((state) => ({
     connections: [...state.connections, { ...conn, id: genId() }]
