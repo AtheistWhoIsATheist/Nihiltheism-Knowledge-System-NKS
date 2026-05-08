@@ -37,6 +37,7 @@ import { FRONTEND_DESIGN_PROMPT } from "../constants/frontend-design";
 import { THREEJS_SKILLS_PROMPT } from "../constants/threejs-skills";
 import { ELITE_SOFTWARE_ARCHITECT_PROMPT } from "../constants/elite-software-architect";
 import { SENIOR_ENGINEERING_EXECUTION_PROMPT } from "../constants/senior-engineering-execution";
+import { FILE_INGESTION_SYSTEM_PROMPT } from "../constants/file-ingestion-system";
 
 type ChatRole = "user" | "assistant" | "system";
 
@@ -671,6 +672,19 @@ export default function NihiltheismEngine() {
                         }
                       >
                        + Sr. Engineer Exec
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                         className="text-[10px] uppercase font-bold tracking-widest border-border hover:bg-muted col-span-2"
+                        onClick={() =>
+                          updateActiveThread((thread) => ({
+                            ...thread,
+                            systemPrompt: thread.systemPrompt + "\n\n" + FILE_INGESTION_SYSTEM_PROMPT,
+                          }))
+                        }
+                      >
+                       + File Ingestion
                       </Button>
                     </div>
                     <Button
